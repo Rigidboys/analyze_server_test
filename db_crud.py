@@ -1,10 +1,14 @@
+from dotenv import load_dotenv
+import os
 import pymysql
 
+load_dotenv()
+
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '1234',
-    'db': 'test_schema',
+    'host': os.getenv("HOST"),
+    'user': os.getenv("USER"),
+    'password': os.getenv("PASSWORD"),
+    'db': os.getenv("DB"),
     'charset': 'utf8mb4'
 }
 
