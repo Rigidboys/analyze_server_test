@@ -5,11 +5,13 @@ import os
 ALLOWED_TABLES = set(os.getenv("ALLOWED_TABLES", "").split(','))
 
 def load_df(table_name):
+    if not table_name.isidentifier():
+        raise ValueError("테이블명이 유효하지 않습니다.")
     if table_name not in ALLOWED_TABLES:
         raise ValueError(f"허용되지 않은 테이블명입니다: {table_name}")
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {table_name}")
+    cursor.execute(f"SELECT * FROM `{table_name}`")
     rows = cursor.fetchall()
 
     # 컬럼명 자동 추출
