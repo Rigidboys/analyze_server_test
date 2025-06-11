@@ -6,6 +6,13 @@ from db_crud import *
 app = Flask(__name__)
 CORS(app)
 
+@app.route('/api/monthly_totals', methods=['GET'])
+def monthly_totals():
+    try:
+        return jsonify(get_monthly_totals())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/total_sales', methods=['GET'])
 def total_sales():
     try:
