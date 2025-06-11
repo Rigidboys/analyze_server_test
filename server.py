@@ -6,49 +6,54 @@ from db_crud import *
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/analyze/purchase_trend', methods=['GET'])
-def analyze_purchase_trend():
+@app.route('/api/total_sales', methods=['GET'])
+def total_sales():
     try:
-        result = get_purchase_trend()
-        # result.index = result.index.astype(str)
-        return jsonify(result.reset_index().to_dict(orient='records'))
+        return jsonify({"total_sales": get_total_sales()})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/analyze/volume_by_customer', methods=['GET'])
-def analyze_volume_by_customer():
+@app.route('/api/total_purchases', methods=['GET'])
+def total_purchases():
     try:
-        result = get_volume_by_customer()
-        return jsonify(result.to_dict())
+        return jsonify({"total_purchases": get_total_purchases()})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/analyze/sales_by_type', methods=['GET'])
-def analyze_sales_by_type():
+@app.route('/api/total_paid', methods=['GET'])
+def total_paid():
     try:
-        result = get_margin_and_sales_by_type()
-        return jsonify(result.to_dict())
+        return jsonify({"total_paid": get_total_paid_amount()})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/analyze/periodic_summary', methods=['GET'])
-def analyze_periodic_summary():
+@app.route('/api/unpaid', methods=['GET'])
+def unpaid():
     try:
-        result = get_periodic_summary()
-        result.index = result.index.astype(str)
-        return jsonify(result.reset_index().to_dict(orient='records'))
+        return jsonify({"unpaid": get_unpaid_amount()})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route('/analyze/payment_compliance', methods=['GET'])
-def analyze_payment_compliance():
+@app.route('/api/margin_by_product', methods=['GET'])
+def margin_by_product():
     try:
-        result = get_payment_compliance_rate()
-        return jsonify({'compliance_rate': result})
+        return jsonify(get_margin_rate_by_product())
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
+@app.route('/api/avg_margin_rate', methods=['GET'])
+def avg_margin_rate():
+    try:
+        return jsonify({"average_margin_rate": get_average_margin_rate()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-
+@app.route('/api/payment_reliability', methods=['GET'])
+def payment_reliability():
+    try:
+        return jsonify({"payment_reliability": get_payment_reliability_by_customer()})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
 if __name__ == '__main__':
     app.run(host='0.0.0.0' , port=5000)
