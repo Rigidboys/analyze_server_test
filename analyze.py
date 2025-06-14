@@ -4,14 +4,27 @@ import os
 
 ALLOWED_TABLES = set(os.getenv("ALLOWED_TABLES", "").split(','))
 
-def load_df(table_name):
+def load_df(table_name, user_id=None, role="employee"):
     if not table_name.isidentifier():
         raise ValueError("테이블명이 유효하지 않습니다.")
     if table_name not in ALLOWED_TABLES:
         raise ValueError(f"허용되지 않은 테이블명입니다: {table_name}")
+    
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM `{table_name}`")
+    sql = f'SELECT * FROM `{table_name}`'
+
+    if role not in ['admin', 'manager']:
+        if table_name == 'purchase':
+            if user_id is None:
+                raise ValueError("user_id가 필요합니다.")
+            sql += " WHERE user_id = %s"
+            cursor.execute(sql, (user_id,))
+        else:
+            cursor.execute(sql)
+    else:
+        cursor.execute(sql)
+    
     rows = cursor.fetchall()
 
     # 컬럼명 자동 추출
@@ -23,7 +36,7 @@ def load_df(table_name):
     return df
 
 def get_monthly_totals():
-    df = load_df('purchase')
+    df = load_df('purchase', user_id="user001", role="employee")
     df['purchased_date'] = pd.to_datetime(df['purchased_date'], errors='coerce')
     df = df.dropna(subset=['purchased_date', 'purchase_amount', 'purchase_price', 'purchase_or_sale'])
 
