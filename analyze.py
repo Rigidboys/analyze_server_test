@@ -1,10 +1,22 @@
 from db_crud import *
 import pandas as pd
 import os
+from flask import request
+import jwt
 
 ALLOWED_TABLES = set(os.getenv("ALLOWED_TABLES", "").split(','))
+SECRET_KEY = "my_super_long_secure_key_that_is_at_least_32_bytes"
 
-def load_df(table_name, user_id=None, role="employee"):
+def get_user_info_from_token():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header:
+        raise ValueError("No token provided")
+    
+    token = auth_header.split(" ")[1]  # Bearer <token>
+    payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    return payload["UserId"], payload["role"]
+
+def load_df(table_name, user_id="", role="employee"):
     if not table_name.isidentifier():
         raise ValueError("테이블명이 유효하지 않습니다.")
     if table_name not in ALLOWED_TABLES:
@@ -35,8 +47,8 @@ def load_df(table_name, user_id=None, role="employee"):
     conn.close()
     return df
 
-def get_monthly_totals():
-    df = load_df('purchase', user_id="user001", role="employee")
+def get_monthly_totals(user_id, role):
+    df = load_df('purchase', user_id, role)
     df['purchased_date'] = pd.to_datetime(df['purchased_date'], errors='coerce')
     df = df.dropna(subset=['purchased_date', 'purchase_amount', 'purchase_price', 'purchase_or_sale'])
 
@@ -55,8 +67,8 @@ def get_monthly_totals():
 
     return grouped.to_dict(orient='records')
 
-def get_sales_by_customer():
-    df = load_df('purchase')
+def get_sales_by_customer(user_id, role):
+    df = load_df('purchase', user_id, role)
 
     # 매출만 필터링
     df = df[df['purchase_or_sale'] == '매출']
@@ -70,8 +82,8 @@ def get_sales_by_customer():
 
     return result.to_dict(orient='records')
 
-def get_sales_by_product():
-    df = load_df('purchase')
+def get_sales_by_product(user_id, role):
+    df = load_df('purchase', user_id, role)
 
     df = df[df['purchase_or_sale'] == '매출']
     df = df.dropna(subset=['product_name', 'purchase_amount', 'purchase_price'])
@@ -81,34 +93,39 @@ def get_sales_by_product():
 
     return result.to_dict(orient='records')
 
-def get_total_sales():
-    df = load_df('purchase')
+def get_total_sales(user_id, role):
+    df = load_df('purchase', user_id, role)
     df = df[(df['purchase_or_sale'] == '매출') & df['purchase_amount'].notna() & df['purchase_price'].notna()]
     return int((df['purchase_amount'] * df['purchase_price']).sum())
 
-def get_total_purchases():
-    df = load_df('purchase')
+def get_total_purchases(user_id, role):
+    df = load_df('purchase', user_id, role)
     df = df[(df['purchase_or_sale'] == '매입') & df['purchase_amount'].notna() & df['purchase_price'].notna()]
     return int((df['purchase_amount'] * df['purchase_price']).sum())
 
-def get_total_paid_amount():
-    df = load_df('purchase')
+def get_total_paid_amount(user_id, role):
+    df = load_df('purchase', user_id, role)
     df = df[df['is_payment'] == 1]
     df = df.dropna(subset=['paid_payment'])
 
     total_paid = int(df['paid_payment'].sum())
     return total_paid
 
-def get_unpaid_amount():
-    df = load_df('purchase')
+def get_unpaid_amount(user_id, role):
+    df = load_df('purchase', user_id, role)
     df = df[(df['purchase_or_sale'] == '매출') & (df['is_payment'] == 0)]
     df = df.dropna(subset=['purchase_amount', 'purchase_price'])
     unpaid = int((df['purchase_amount'] * df['purchase_price']).sum())
     return unpaid
 
-def get_margin_rate_by_product():
-    sales_df = load_df('purchase')
-    product_df = load_df('product')
+def get_margin_rate_by_product(user_id, role):
+    sales_df = load_df('purchase', user_id, role)
+    product_df = load_df('product', user_id, role)
+
+    # 숫자형 강제 변환
+    sales_df['purchase_amount'] = pd.to_numeric(sales_df['purchase_amount'], errors='coerce')
+    sales_df['purchase_price'] = pd.to_numeric(sales_df['purchase_price'], errors='coerce')
+    product_df['production_price'] = pd.to_numeric(product_df['production_price'], errors='coerce')
 
     # 매출 필터
     sales_df = sales_df[sales_df['purchase_or_sale'] == '매출']
@@ -136,15 +153,16 @@ def get_margin_rate_by_product():
 
     return merged[['product_name', 'sales', 'cost', 'margin_rate']].to_dict(orient='records')
 
-def get_average_margin_rate():
-    data = get_margin_rate_by_product()
+
+def get_average_margin_rate(user_id, role):
+    data = get_margin_rate_by_product(user_id, role)
     rates = [item['margin_rate'] for item in data if item['margin_rate'] is not None]
     if not rates:
         return 0.0
     return round(sum(rates) / len(rates), 2)
 
-def get_payment_reliability_by_customer():
-    df = load_df('purchase')
+def get_payment_reliability_by_customer(user_id, role):
+    df = load_df('purchase', user_id, role)
 
     # 매출만 분석 대상
     df = df[df['purchase_or_sale'] == '매출']
